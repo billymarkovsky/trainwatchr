@@ -5,5 +5,8 @@
     "idf.openOcdConfigs": [
         "board/esp32-wrover-kit-3.3v.cfg"
     ],
-    "idf.toolsPathWin": "C:\\Users\\billy\\.espressif"
+    "idf.toolsPathWin": "C:\\Users\\billy\\.espressif",
+    "files.associations": {
+        "task.h": "c"
+    }
 }
