@@ -2,26 +2,9 @@
 #include "driver/i2c_master.h"
 
 
-i2c_master_bus_config_t i2c_mst_config = {
-    .clk_source = I2C_CLK_SRC_DEFAULT,
-    .i2c_port = -1,
-    .scl_io_num = 26,
-    .sda_io_num = 25,
-    .glitch_ignore_cnt = 7,
-    .flags.enable_internal_pullup = true,
-};
 
 
-i2c_master_bus_handle_t bus_handle;
-i2c_device_config_t dev_cfg = {
-    .dev_addr_length = 7,
-    .device_address = S31FL3741A_ADDR,
-    .scl_speed_hz = 400000,
-};
-
-i2c_master_dev_handle_t dev_handle;
-
-uint32_t S31FL3741_unlock(void)
+uint32_t S31FL3741_unlock(i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
@@ -35,13 +18,13 @@ uint32_t S31FL3741_unlock(void)
 	return result;
 }
 
-uint32_t S31FL3741_writeRegister(uint8_t reg, uint8_t *buffer, uint16_t length, bool send_stop)
+uint32_t S31FL3741_writeRegister(uint8_t reg, uint8_t *buffer, uint16_t length, bool send_stop, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
 
 	// Unlock the command register.
-	result = S31FL3741_unlock();
+	result = S31FL3741_unlock(dev_handle);
 
 	// Select register
 	i2cBuffer[0] = COMMANDREGISTER;
@@ -54,13 +37,13 @@ uint32_t S31FL3741_writeRegister(uint8_t reg, uint8_t *buffer, uint16_t length, 
 	return result;
 }
 
-uint32_t S31FL3741_readRegister(uint8_t reg, uint8_t addr, uint8_t *buffer, uint16_t length, bool send_stop)
+uint32_t S31FL3741_readRegister(uint8_t reg, uint8_t addr, uint8_t *buffer, uint16_t length, bool send_stop, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
 
 	// Unlock the command register.
-	result = S31FL3741_unlock();
+	result = S31FL3741_unlock(dev_handle);
 
 	// Select register
 	i2cBuffer[0] = COMMANDREGISTER;
@@ -76,7 +59,7 @@ uint32_t S31FL3741_readRegister(uint8_t reg, uint8_t addr, uint8_t *buffer, uint
 	return result;
 }
 
-uint32_t S31FL3741_setOperation(uint8_t mode)
+uint32_t S31FL3741_setOperation(uint8_t mode, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
@@ -85,12 +68,12 @@ uint32_t S31FL3741_setOperation(uint8_t mode)
 	i2cBuffer[0] = REG_CONFIGURATION;
 	i2cBuffer[1] = mode;
 
-	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true);
+	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true, dev_handle);
 
 	return result;
 }
 
-uint32_t S31FL3741_setGlobalCurrent(uint8_t value)
+uint32_t S31FL3741_setGlobalCurrent(uint8_t value, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
@@ -99,12 +82,12 @@ uint32_t S31FL3741_setGlobalCurrent(uint8_t value)
 	i2cBuffer[0] = REG_GLOBALCURRENT;
 	i2cBuffer[1] = value;
 
-	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true);
+	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true, dev_handle);
 
 	return result;
 }
 
-uint32_t writeScaling(uint16_t ledPosition, uint8_t scaleValue)
+uint32_t writeScaling(uint16_t ledPosition, uint8_t scaleValue, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
@@ -117,14 +100,14 @@ uint32_t writeScaling(uint16_t ledPosition, uint8_t scaleValue)
 		/* prepare data ... first byte sets address within page, second byte contains data to be written */
 		i2cBuffer[0] = (uint8_t) (ledPosition < PAGE_ZERO_BOUNDARY ? ledPosition : ledPosition - PAGE_ZERO_BOUNDARY);
 		i2cBuffer[1] = scaleValue;
-		result = S31FL3741_writeRegister(reg, i2cBuffer, 2, true);
+		result = S31FL3741_writeRegister(reg, i2cBuffer, 2, true, dev_handle);
 	}
 	else result = 0xFFFF;
 
 	return result;
 }
 
-uint32_t readScaling(uint16_t ledPosition, uint8_t *scaleValue)
+uint32_t readScaling(uint16_t ledPosition, uint8_t *scaleValue, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t reg, addr;
@@ -136,7 +119,7 @@ uint32_t readScaling(uint16_t ledPosition, uint8_t *scaleValue)
 		// Set address for requested LED
 		addr = (uint8_t) (ledPosition < PAGE_ZERO_BOUNDARY ? ledPosition : ledPosition - PAGE_ZERO_BOUNDARY);
 		// read device
-		result = S31FL3741_readRegister(reg, addr, scaleValue, 1, true);
+		result = S31FL3741_readRegister(reg, addr, scaleValue, 1, true, dev_handle);
 	}
 	else result = 0xFFFF;
 
@@ -144,7 +127,7 @@ uint32_t readScaling(uint16_t ledPosition, uint8_t *scaleValue)
 }
 
 // Expects scaling buffer (max size = MAX_LEDS). Starting address of each page is automatically set to zero.
-uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length)
+uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[PAGE_ZERO_BOUNDARY + 1];
@@ -159,7 +142,7 @@ uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length)
 			i2cBuffer[i + 1] = buffer[i];
 		}
 		// select PAGE_SCALING_0 register and send starting address along with requested data
-		result = S31FL3741_writeRegister(PAGE_SCALING_0, i2cBuffer, PAGE_ZERO_BOUNDARY + 1, true);
+		result = S31FL3741_writeRegister(PAGE_SCALING_0, i2cBuffer, PAGE_ZERO_BOUNDARY + 1, true, dev_handle);
 
 		/* copy PAGE1 buffer contents to local i2cBuffer */
 		for(uint8_t i = 0; i < (MAX_LEDS - PAGE_ZERO_BOUNDARY); i++)
@@ -167,7 +150,7 @@ uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length)
 			i2cBuffer[i + 1] = buffer[i + PAGE_ZERO_BOUNDARY];
 		}
 		// select PAGE_SCALING_1 register and send starting address along with requested data
-		result = S31FL3741_writeRegister(PAGE_SCALING_1, i2cBuffer, (MAX_LEDS - PAGE_ZERO_BOUNDARY) + 1, true);
+		result = S31FL3741_writeRegister(PAGE_SCALING_1, i2cBuffer, (MAX_LEDS - PAGE_ZERO_BOUNDARY) + 1, true, dev_handle);
 	}
 	else result = 0xFFFF;
 
@@ -175,7 +158,7 @@ uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length)
 }
 
 // Expects pwm buffer (max size = MAX_LEDS). Starting address of each page is automatically set to zero.
-uint32_t writeGlobalLED(uint8_t *buffer, uint16_t length)
+uint32_t writeGlobalLED(uint8_t *buffer, uint16_t length, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[PAGE_ZERO_BOUNDARY + 1];
@@ -190,7 +173,7 @@ uint32_t writeGlobalLED(uint8_t *buffer, uint16_t length)
 			i2cBuffer[i + 1] = buffer[i];
 		}
 		// select PAGE_PWM0 register and send starting address along with requested data
-		result = S31FL3741_writeRegister(PAGE_PWM0, i2cBuffer, PAGE_ZERO_BOUNDARY + 1, true);
+		result = S31FL3741_writeRegister(PAGE_PWM0, i2cBuffer, PAGE_ZERO_BOUNDARY + 1, true, dev_handle);
 
 		/* copy PAGE1 buffer contents to local i2cBuffer */
 		for(uint8_t i = 0; i < (MAX_LEDS - PAGE_ZERO_BOUNDARY); i++)
@@ -198,14 +181,14 @@ uint32_t writeGlobalLED(uint8_t *buffer, uint16_t length)
 			i2cBuffer[i + 1] = buffer[i + PAGE_ZERO_BOUNDARY];
 		}
 		// select PAGE_PWM1 register and send starting address along with requested data
-		result = S31FL3741_writeRegister(PAGE_PWM1, i2cBuffer, (MAX_LEDS - PAGE_ZERO_BOUNDARY) + 1, true);
+		result = S31FL3741_writeRegister(PAGE_PWM1, i2cBuffer, (MAX_LEDS - PAGE_ZERO_BOUNDARY) + 1, true, dev_handle);
 	}
 	else result = 0xFFFF;
 
 	return result;
 }
 
-uint32_t writeLED(uint16_t ledPosition, uint8_t pwmValue)
+uint32_t writeLED(uint16_t ledPosition, uint8_t pwmValue, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t i2cBuffer[2];
@@ -218,14 +201,14 @@ uint32_t writeLED(uint16_t ledPosition, uint8_t pwmValue)
 		/* prepare data ... first byte sets address within page, second byte contains data to be written */
 		i2cBuffer[0] = (uint8_t) (ledPosition < PAGE_ZERO_BOUNDARY ? ledPosition : ledPosition - PAGE_ZERO_BOUNDARY);
 		i2cBuffer[1] = pwmValue;
-		result = S31FL3741_writeRegister(reg, i2cBuffer, 2, true);
+		result = S31FL3741_writeRegister(reg, i2cBuffer, 2, true, dev_handle);
 	}
 	else result = 0xFFFF;
 
 	return result;
 }
 
-uint32_t readLED(uint16_t ledPosition, uint8_t *pwmValue)
+uint32_t readLED(uint16_t ledPosition, uint8_t *pwmValue, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t reg, addr;
@@ -237,54 +220,49 @@ uint32_t readLED(uint16_t ledPosition, uint8_t *pwmValue)
 		// Set address for requested LED
 		addr = (uint8_t) (ledPosition < PAGE_ZERO_BOUNDARY ? ledPosition : ledPosition - PAGE_ZERO_BOUNDARY);
 		// read device
-		result = S31FL3741_readRegister(reg, addr, pwmValue, 1, true);
+		result = S31FL3741_readRegister(reg, addr, pwmValue, 1, true, dev_handle);
 	}
 	else result = 0xFFFF;
 
 	return result;
 }
 
-uint32_t toggleLED(uint16_t ledPosition)
+uint32_t toggleLED(uint16_t ledPosition, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result = 0;
 	uint8_t data;
 
 	if(ledPosition < MAX_LEDS)
 	{
-		result = readLED(ledPosition, &data);
+		result = readLED(ledPosition, &data, dev_handle);
 		data = (0 == data ? 0xFF : 0);
-		result = writeLED(ledPosition, data);
+		result = writeLED(ledPosition, data, dev_handle);
 	}
 	else result = 0xFFFF;
 
 	return result;
 }
 
-uint32_t S31FL3741_init()
+uint32_t S31FL3741_init(i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result;
 	uint8_t i2cBuffer[2];
 
 	uint8_t ledMatrix[MAX_LEDS];
 
-    
-    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
-    
-    ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
+	result = S31FL3741_setOperation(NORMAL_OPERATION, dev_handle);
 
-	result = S31FL3741_setOperation(NORMAL_OPERATION);
-
-	result = S31FL3741_setGlobalCurrent(0xFF);
+	result = S31FL3741_setGlobalCurrent(0xFF, dev_handle);
 
 	// Set Pull up & Down for SWx CSy
 	i2cBuffer[0] = REG_PULLDOWNUP;
 	i2cBuffer[1] = PULLUP_PULLDOWN;
-	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true);
+	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true, dev_handle);
 
 	// Set PWM Frequency
 	i2cBuffer[0] = REG_PWMFREQ;
 	i2cBuffer[1] = PWM_FREQUENCY;
-	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true);
+	result = S31FL3741_writeRegister(PAGE_FUNCTION, i2cBuffer, 2, true, dev_handle);
 
 	/* set scaling to 0xFF (max current/scaling) */
 	for(uint16_t i = 0; i < sizeof(ledMatrix); i++)
@@ -292,15 +270,15 @@ uint32_t S31FL3741_init()
 		ledMatrix[i] = 0xFF;
 	}
 
-	result = writeGlobalScaling(ledMatrix, sizeof(ledMatrix));
+	result = writeGlobalScaling(ledMatrix, sizeof(ledMatrix),dev_handle);
 
 	/* extinguish all LEDs */
-	clearAllMatrix();
+	clearAllMatrix(dev_handle);
 
 	return result;
 }
 
-uint32_t clearAllMatrix(void)
+uint32_t clearAllMatrix(i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result;
 	uint8_t ledMatrix[MAX_LEDS];
@@ -311,12 +289,12 @@ uint32_t clearAllMatrix(void)
 		ledMatrix[i] = 0x00;
 	}
 
-	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix));
+	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix),dev_handle);
 
 	return result;
 }
 
-uint32_t setAllMatrix(void)
+uint32_t setAllMatrix(i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result;
 	uint8_t ledMatrix[MAX_LEDS];
@@ -327,12 +305,12 @@ uint32_t setAllMatrix(void)
 		ledMatrix[i] = 0xff;
 	}
 
-	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix));
+	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix), dev_handle);
 
 	return result;
 }
 
-uint32_t writeAllMatrix(uint8_t pwmValue)
+uint32_t writeAllMatrix(uint8_t pwmValue, i2c_master_dev_handle_t dev_handle)
 {
 	uint32_t result;
 	uint8_t ledMatrix[MAX_LEDS];
@@ -343,7 +321,7 @@ uint32_t writeAllMatrix(uint8_t pwmValue)
 		ledMatrix[i] = pwmValue;
 	}
 
-	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix));
+	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix), dev_handle);
 
 	return result;
 }

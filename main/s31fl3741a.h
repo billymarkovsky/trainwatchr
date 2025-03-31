@@ -20,26 +20,27 @@
  
  #include "stdbool.h"
  #include "stdint.h"
+ #include "driver/i2c_master.h"
  
  /***********************************
   * Function prototypes
   ***********************************/
- uint32_t S31FL3741_init(void);
- uint32_t S31FL3741_unlock(void);
- uint32_t S31FL3741_writeRegister(uint8_t reg, uint8_t *buffer, uint16_t length, bool send_stop);
- uint32_t S31FL3741_readRegister(uint8_t reg, uint8_t addr, uint8_t *buffer, uint16_t length, bool send_stop);
- uint32_t S31FL3741_setOperation(uint8_t mode);
- uint32_t S31FL3741_setGlobalCurrent(uint8_t value);
- uint32_t writeScaling(uint16_t ledPosition, uint8_t scaleValue);
- uint32_t readScaling(uint16_t ledPosition, uint8_t *scaleValue);
- uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length);
- uint32_t writeLED(uint16_t ledPosition, uint8_t pwmValue);
- uint32_t writeGlobalLED(uint8_t *buffer, uint16_t length);
- uint32_t readLED(uint16_t ledPosition, uint8_t *pwmValue);
- uint32_t toggleLED(uint16_t ledPosition);
- uint32_t clearAllMatrix(void);
- uint32_t setAllMatrix(void);
- uint32_t writeAllMatrix(uint8_t pwmValue);
+ uint32_t S31FL3741_init(i2c_master_dev_handle_t dev_handle);
+ uint32_t S31FL3741_unlock(i2c_master_dev_handle_t dev_handle);
+ uint32_t S31FL3741_writeRegister(uint8_t reg, uint8_t *buffer, uint16_t length, bool send_stop, i2c_master_dev_handle_t dev_handle);
+ uint32_t S31FL3741_readRegister(uint8_t reg, uint8_t addr, uint8_t *buffer, uint16_t length, bool send_stop, i2c_master_dev_handle_t dev_handle);
+ uint32_t S31FL3741_setOperation(uint8_t mode, i2c_master_dev_handle_t dev_handle);
+ uint32_t S31FL3741_setGlobalCurrent(uint8_t value, i2c_master_dev_handle_t dev_handle);
+ uint32_t writeScaling(uint16_t ledPosition, uint8_t scaleValue, i2c_master_dev_handle_t dev_handle);
+ uint32_t readScaling(uint16_t ledPosition, uint8_t *scaleValue, i2c_master_dev_handle_t dev_handle);
+ uint32_t writeGlobalScaling(uint8_t *buffer, uint16_t length, i2c_master_dev_handle_t dev_handle);
+ uint32_t writeLED(uint16_t ledPosition, uint8_t pwmValue, i2c_master_dev_handle_t dev_handle);
+ uint32_t writeGlobalLED(uint8_t *buffer, uint16_t length, i2c_master_dev_handle_t dev_handle);
+ uint32_t readLED(uint16_t ledPosition, uint8_t *pwmValue, i2c_master_dev_handle_t dev_handle);
+ uint32_t toggleLED(uint16_t ledPosition, i2c_master_dev_handle_t dev_handle);
+ uint32_t clearAllMatrix(i2c_master_dev_handle_t dev_handle);
+ uint32_t setAllMatrix(i2c_master_dev_handle_t dev_handle);
+ uint32_t writeAllMatrix(uint8_t pwmValue, i2c_master_dev_handle_t dev_handle);
  
  /***********************************
   * Macros
@@ -50,8 +51,6 @@
  #define setLED_theme(x)		(writeLED(x, PWM_ON))
  #define clearLED_theme(x)	(writeLED(x, PWM_OFF))
  
- /* define S31FL3741A slave address (7-bit) */
- #define S31FL3741A_ADDR		(0x33)
  
  #define MAX_LEDS 			(351u)
  #define PAGE_ZERO_BOUNDARY	(0xB4)
