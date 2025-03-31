@@ -51,7 +51,7 @@
  #define clearLED_theme(x)	(writeLED(x, PWM_OFF))
  
  /* define S31FL3741A slave address (7-bit) */
- #define S31FL3741A_ADDR		(0x30)
+ #define S31FL3741A_ADDR		(0x33)
  
  #define MAX_LEDS 			(351u)
  #define PAGE_ZERO_BOUNDARY	(0xB4)

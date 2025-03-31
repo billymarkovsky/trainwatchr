@@ -1,0 +1,7 @@
+
+# Add Python GDB extensions
+python
+import sys
+sys.path = ['C:\\Users\\billy\\esp\\v5.4\\esp-idf\\tools', 'C:\\Users\\billy\\.espressif\\tools\\idf-python\\3.11.2\\python311.zip', 'C:\\Users\\billy\\.espressif\\tools\\idf-python\\3.11.2', 'C:\\Users\\billy\\.espressif\\tools\\idf-python\\3.11.2\\Lib', 'C:\\Users\\billy\\.espressif\\python_env\\idf5.4_py3.11_env', 'C:\\Users\\billy\\.espressif\\python_env\\idf5.4_py3.11_env\\Lib\\site-packages', 'C:\\Users\\billy\\esp\\v5.4\\esp-idf\\tools\\idf_py_actions']
+import freertos_gdb
+end

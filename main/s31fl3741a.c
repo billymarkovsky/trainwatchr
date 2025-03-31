@@ -1,5 +1,25 @@
 #include "s31fl3741a.h"
-#include "i2c_master.h"
+#include "driver/i2c_master.h"
+
+
+i2c_master_bus_config_t i2c_mst_config = {
+    .clk_source = I2C_CLK_SRC_DEFAULT,
+    .i2c_port = -1,
+    .scl_io_num = 26,
+    .sda_io_num = 25,
+    .glitch_ignore_cnt = 7,
+    .flags.enable_internal_pullup = true,
+};
+
+
+i2c_master_bus_handle_t bus_handle;
+i2c_device_config_t dev_cfg = {
+    .dev_addr_length = 7,
+    .device_address = S31FL3741A_ADDR,
+    .scl_speed_hz = 400000,
+};
+
+i2c_master_dev_handle_t dev_handle;
 
 uint32_t S31FL3741_unlock(void)
 {
@@ -10,7 +30,7 @@ uint32_t S31FL3741_unlock(void)
 	i2cBuffer[0] = COMMANDREGISTER_WRITELOCK;
 	i2cBuffer[1] = UNLOCK_KEY;
 
-	result = i2c_master_transmit(S31FL3741A_ADDR, i2cBuffer, 2, TIMEOUT);
+	result = i2c_master_transmit(dev_handle, i2cBuffer, 2, TIMEOUT);
 
 	return result;
 }
@@ -26,10 +46,10 @@ uint32_t S31FL3741_writeRegister(uint8_t reg, uint8_t *buffer, uint16_t length, 
 	// Select register
 	i2cBuffer[0] = COMMANDREGISTER;
 	i2cBuffer[1] = reg;
-	result = i2c_master_transmit(S31FL3741A_ADDR, i2cBuffer, 2, TIMEOUT);
+	result = i2c_master_transmit(dev_handle, i2cBuffer, 2, TIMEOUT);
 
 	/* write data */
-	result = i2c_master_transmit(S31FL3741A_ADDR, buffer, length, TIMEOUT);
+	result = i2c_master_transmit(dev_handle, buffer, length, TIMEOUT);
 
 	return result;
 }
@@ -45,13 +65,13 @@ uint32_t S31FL3741_readRegister(uint8_t reg, uint8_t addr, uint8_t *buffer, uint
 	// Select register
 	i2cBuffer[0] = COMMANDREGISTER;
 	i2cBuffer[1] = reg;
-	result = i2c_master_transmit(S31FL3741A_ADDR, i2cBuffer, 2, TIMEOUT);
+	result = i2c_master_transmit(dev_handle, i2cBuffer, 2, TIMEOUT);
 
 	/* set address within page */
-	result = i2c_master_transmit(S31FL3741A_ADDR, &addr, 1, TIMEOUT);
+	result = i2c_master_transmit(dev_handle, &addr, 1, TIMEOUT);
 
 	/* read requested data */
-	result = i2c_master_receive(S31FL3741A_ADDR, buffer, 1, TIMEOUT);
+	result = i2c_master_receive(dev_handle, buffer, 1, TIMEOUT);
 
 	return result;
 }
@@ -246,6 +266,11 @@ uint32_t S31FL3741_init()
 	uint8_t i2cBuffer[2];
 
 	uint8_t ledMatrix[MAX_LEDS];
+
+    
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &bus_handle));
+    
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
 
 	result = S31FL3741_setOperation(NORMAL_OPERATION);
 

@@ -1,0 +1,4 @@
+
+source C:/Users/billy/trainwatchr/build/gdbinit/py_extensions
+source C:/Users/billy/trainwatchr/build/gdbinit/symbols
+source C:/Users/billy/trainwatchr/build/gdbinit/connect
