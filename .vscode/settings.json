@@ -13,5 +13,5 @@
         "s31fl3741a.h": "c"
     },
     "idf.flashType": "UART",
-    "idf.portWin": "COM6"
+    "idf.portWin": "COM13"
 }

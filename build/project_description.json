@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "trainwatchr",
-    "project_version":    "9a0138e-dirty",
+    "project_version":    "a06199f-dirty",
     "project_path":       "C:/Users/billy/trainwatchr",
     "idf_path":           "C:/Users/billy/esp/v5.4/esp-idf",
     "build_dir":          "C:/Users/billy/trainwatchr/build",
@@ -1195,7 +1195,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Users/billy/trainwatchr/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Users/billy/trainwatchr/main/s31fl3741a.c", "C:/Users/billy/trainwatchr/main/blinky.c" ],
+            "sources": [ "C:/Users/billy/trainwatchr/main/s31fl3741a.c", "C:/Users/billy/trainwatchr/main/blinky.c", "C:/Users/billy/trainwatchr/main/station_map.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {

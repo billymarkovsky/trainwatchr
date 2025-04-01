@@ -1,0 +1,199 @@
+#include "driver/i2c_master.h"
+#include "freertos/FreeRTOS.h"
+#include "s31fl3741a.h"
+#include "station_map.h"
+
+
+
+
+station_t ALEWIFE_SOUTH     = {CS28_SW1, 2};
+station_t ALEWIFE_NORTH     = {CS30_SW1, 2};
+station_t ALEWIFE_TO_DAVIS  = {CS18_SW1, 2};
+station_t DAVIS_TO_ALEFWIFE = {CS17_SW1, 2};
+station_t DAVIS_SOUTH       = {CS22_SW2, 2};
+station_t DAVIS_NORTH       = {CS23_SW2, 2};
+station_t DAVIS_TO_PORTER   = {CS25_SW2, 2};
+station_t PORTER_TO_DAVIS   = {CS24_SW2, 2};
+station_t PORTER_SOUTH      = {CS16_SW6, 1};
+station_t PORTER_NORTH      = {CS29_SW6, 1};
+station_t PORTER_TO_HARVARD = {CS29_SW5, 1};
+station_t HARVARD_TO_PORTER = {CS18_SW3, 2};
+station_t HARVARD_SOUTH = {CS15_SW3, 2};
+station_t HARVARD_NORTH = {CS17_SW3, 2};
+station_t HARVARD_TO_CENTRAL = {CS16_SW3, 2};
+station_t CENTRAL_TO_HARVARD = {CS13_SW4, 2};
+station_t CENTRAL_SOUTH = {CS15_SW4, 2};
+station_t CENTRAL_NORTH = {CS14_SW4, 2};
+station_t CENTRAL_TO_KENDALL = {CS13_SW5, 2};
+station_t KENDALL_TO_CENTRAL = {CS14_SW5, 2};
+station_t KENDALL_SOUTH = {CS16_SW5, 2};
+station_t KENDALL_NORTH = {CS15_SW5, 2};
+station_t KENDALL_TO_CHARLES = {CS24_SW6, 2};
+station_t CHARLES_TO_KENDALL = {CS25_SW6, 2};
+station_t CHARLES_SOUTH = {CS22_SW6, 2};
+station_t CHARLES_NORTH = {CS23_SW6, 2};
+station_t CHARLES_TO_PARK = {CS35_SW9, 2};
+station_t PARK_TO_CHARLES = {CS33_SW9, 2};
+station_t PARK_SOUTH = {CS39_SW9, 2};
+station_t PARK_NORTH = {CS37_SW9, 2};
+station_t PARK_TO_DOWNTOWN = {CS32_SW9, 2};
+station_t DOWNTOWN_TO_PARK = {CS28_SW9, 2};
+station_t DOWNTOWN_SOUTH = {CS34_SW9, 2};
+station_t DOWNTOWN_NORTH = {CS18_SW9, 2};
+station_t DOWNTOWN_TO_SOUTH = {CS17_SW9, 2};
+station_t SOUTH_TO_DOWNTOWN = {CS30_SW9, 2};
+station_t SOUTH_SOUTH = {CS14_SW7, 2};
+station_t SOUTH_NORTH = {CS4_SW7, 2};
+station_t SOUTH_TO_BROADWAY_1 = {CS10_SW7, 2};
+station_t BROADWAY_TO_SOUTH_1 = {CS34_SW7, 2};
+station_t SOUTH_TO_BROADWAY_2 = {CS38_SW7, 2};
+station_t BROADWAY_TO_SOUTH_2 = {CS39_SW7, 2};
+station_t BROADWAY_SOUTH = {CS32_SW7, 2};
+station_t BROADWAY_NORTH = {CS5_SW7, 2};
+station_t BROADWAY_TO_ANDREW = {CS4_SW3, 1};
+station_t ANDREW_TO_BROADWAY = {CS33_SW4, 1};
+station_t ANDREW_SOUTH = {CS6_SW4, 1};
+station_t ANDREW_NORTH = {CS15_SW4, 1};
+station_t ANDREW_TO_JFK = {CS33_SW4, 1};
+station_t JFK_TO_ANDREW = {CS29_SW4, 1};
+station_t JFK_SOUTH = {CS7_SW4, 1};
+station_t JFK_NORTH = {CS31_SW4, 1};
+station_t JFK_TO_SAVIN = {CS36_SW5, 2};
+station_t SAVIN_TO_JFK = {CS35_SW5, 2};
+station_t SAVIN_SOUTH = {CS34_SW5, 2};
+station_t SAVIN_NORTH = {CS33_SW5, 2};
+station_t SAVIN_TO_FIELDS = {CS38_SW4, 2};
+station_t FIELDS_TO_SAVIN = {CS33_SW4, 2};
+station_t FIELDS_SOUTH = {CS32_SW4, 2};
+station_t FIELDS_NORTH = {CS34_SW4, 2};
+station_t FIELDS_TO_SHAWMUT = {CS29_SW3, 2};
+station_t SHAWMUT_TO_FIELDS = {CS35_SW3, 2};
+station_t SHAWMUT_SOUTH = {CS33_SW3, 2};
+station_t SHAWMUT_NORTH = {CS30_SW3, 2};
+station_t SHAWMUT_TO_ASHMONT = {CS34_SW3, 2};
+station_t ASHMONT_TO_SHAWMUT = {CS32_SW3, 2};
+station_t ASHMONT_SOUTH = {CS1_SW6, 1};
+station_t ASHMONT_NORTH = {CS3_SW6, 1};
+station_t ASHMONT_TO_CEDAR_GROVE = {CS37_SW4, 2};
+station_t CEDAR_GROVE_TO_ASHMONT = {CS35_SW4, 2};
+station_t CEDAR_GROVE_SOUTH = {CS36_SW4, 2};
+station_t CEDAR_GROVE_NORTH = {CS39_SW4, 2};
+station_t CEDAR_GROVE_TO_BUTLER = {CS37_SW5, 2};
+station_t BUTLER_TO_CEDAR_GROVE = {CS38_SW5, 2};
+station_t BUTLER_SOUTH = {CS39_SW6, 2};
+station_t BUTLER_NORTH = {CS39_SW5, 2};
+station_t BUTLER_TO_MILTON = {CS38_SW6, 2};
+station_t MILTON_TO_BUTLER = {CS2_SW6, 1};
+station_t MILTON_SOUTH = {CS31_SW6, 1};
+station_t MILTON_NORTH = {CS6_SW6, 1};
+station_t MILTON_TO_CENTRALST = {CS29_SW8, 2};
+station_t CENTRALST_TO_MILTON = {CS27_SW8, 2};
+station_t CENTRAL_SOUTHST = {CS30_SW8, 2};
+station_t CENTRAL_NORTHST = {CS28_SW8, 2};
+station_t CENTRAL_TO_VALLEY = {CS13_SW8, 2};
+station_t VALLEY_TO_CENTRAL = {CS18_SW8, 2};
+station_t VALLEY_SOUTH = {CS16_SW8, 2};
+station_t VALLEY_NORTH = {CS32_SW8, 2};
+station_t VALLEY_TO_CAPEN = {CS15_SW8, 2};
+station_t CAPEN_TO_VALLEY = {CS7_SW6, 1};
+station_t CAPEN_SOUTH = {CS30_SW6, 1};
+station_t CAPEN_NORTH = {CS14_SW8, 2};
+station_t CAPEN_TO_MATTAPAN = {CS30_SW5, 1};
+station_t MATTAPAN_TO_CAPEN = {CS33_SW5, 1};
+station_t MATTAPAN_SOUTH = {CS12_SW8, 2};
+station_t MATTAPAN_NORTH = {CS1_SW5, 1};
+station_t JFK_TO_NQUINCY = {CS35_SW4, 1};
+station_t NQUINCY_TO_JFK = {CS9_SW4, 1};
+station_t NQUINCY_SOUTH = {CS36_SW6, 2};
+station_t NQUINCY_NORTH = {CS37_SW6, 2};
+station_t NQUINCY_TO_WOLLASTON = {CS32_SW5, 2};
+station_t WOLLASTON_TO_NQUINCY = {CS31_SW5, 2};
+station_t WOLLASTON_SOUTH = {CS30_SW5, 2};
+station_t WOLLASTON_NORTH = {CS29_SW5, 2};
+station_t WOLLASTON_TO_CQUINCY = {CS31_SW4, 2};
+station_t QUINCYC_TO_WOLLASTON = {CS30_SW4, 2};
+station_t QUINCYC_SOUTH = {CS28_SW4, 2};
+station_t QUINCYC_NORTH = {CS29_SW4, 2};
+station_t QUINCYC_TO_QADAMS = {CS31_SW3, 2};
+station_t QADAMS_TO_QUINCYC = {CS36_SW3, 2};
+station_t QADAMS_SOUTH = {CS38_SW3, 2};
+station_t QADAMS_NORTH = {CS39_SW3, 2};
+station_t QADAMS_TO_BRAINTREE = {CS37_SW3, 2};
+station_t BRAINTREE_TO_QADAMS = {CS39_SW2, 2};
+station_t BRAINTREE_SOUTH = {CS38_SW2, 2};
+station_t BRAINTREE_NORTH = {CS37_SW2, 2};
+
+const station_t *red_line_stations[] = {
+    &ALEWIFE_SOUTH,&ALEWIFE_NORTH,&ALEWIFE_TO_DAVIS,&DAVIS_TO_ALEFWIFE,&DAVIS_SOUTH,
+    &DAVIS_NORTH,&DAVIS_TO_PORTER,&PORTER_TO_DAVIS,&PORTER_SOUTH,&PORTER_NORTH,&PORTER_TO_HARVARD,
+    &HARVARD_TO_PORTER,&HARVARD_SOUTH,&HARVARD_NORTH,&HARVARD_TO_CENTRAL,&CENTRAL_TO_HARVARD,
+    &CENTRAL_SOUTH,&CENTRAL_NORTH,&CENTRAL_TO_KENDALL,&KENDALL_TO_CENTRAL,&KENDALL_SOUTH,
+    &KENDALL_NORTH,&KENDALL_TO_CHARLES,&CHARLES_TO_KENDALL,&CHARLES_SOUTH,&CHARLES_NORTH,
+    &CHARLES_TO_PARK,&PARK_TO_CHARLES,&PARK_SOUTH,&PARK_NORTH,&PARK_TO_DOWNTOWN,&DOWNTOWN_TO_PARK,
+    &DOWNTOWN_SOUTH,&DOWNTOWN_NORTH,&DOWNTOWN_TO_SOUTH,&SOUTH_TO_DOWNTOWN,&SOUTH_SOUTH,&SOUTH_NORTH,
+    &SOUTH_TO_BROADWAY_1,&BROADWAY_TO_SOUTH_1,&SOUTH_TO_BROADWAY_2,&BROADWAY_TO_SOUTH_2,&BROADWAY_SOUTH,
+    &BROADWAY_NORTH,&BROADWAY_TO_ANDREW,&ANDREW_TO_BROADWAY,&ANDREW_SOUTH,&ANDREW_NORTH,&ANDREW_TO_JFK,
+    &JFK_TO_ANDREW,&JFK_SOUTH,&JFK_NORTH,&JFK_TO_SAVIN,&SAVIN_TO_JFK,&SAVIN_SOUTH,&SAVIN_NORTH,
+    &SAVIN_TO_FIELDS,&FIELDS_TO_SAVIN,&FIELDS_SOUTH,&FIELDS_NORTH,&FIELDS_TO_SHAWMUT,
+    &SHAWMUT_TO_FIELDS,&SHAWMUT_SOUTH,&SHAWMUT_NORTH,&SHAWMUT_TO_ASHMONT,&ASHMONT_TO_SHAWMUT,
+    &ASHMONT_SOUTH,&ASHMONT_NORTH,&ASHMONT_TO_CEDAR_GROVE,&CEDAR_GROVE_TO_ASHMONT,
+    &CEDAR_GROVE_SOUTH,&CEDAR_GROVE_NORTH,&CEDAR_GROVE_TO_BUTLER,&BUTLER_TO_CEDAR_GROVE,
+    &BUTLER_SOUTH,&BUTLER_NORTH,&BUTLER_TO_MILTON,&MILTON_TO_BUTLER,&MILTON_SOUTH,&MILTON_NORTH,
+    &MILTON_TO_CENTRALST,&CENTRALST_TO_MILTON,&CENTRAL_SOUTHST,&CENTRAL_NORTHST,&CENTRAL_TO_VALLEY,
+    &VALLEY_TO_CENTRAL,&VALLEY_SOUTH,&VALLEY_NORTH,&VALLEY_TO_CAPEN,&CAPEN_TO_VALLEY,
+    &CAPEN_SOUTH,&CAPEN_NORTH,&CAPEN_TO_MATTAPAN,&MATTAPAN_TO_CAPEN,&MATTAPAN_SOUTH,
+    &MATTAPAN_NORTH,&JFK_TO_NQUINCY,&NQUINCY_TO_JFK,&NQUINCY_SOUTH,&NQUINCY_NORTH,
+    &NQUINCY_TO_WOLLASTON,&WOLLASTON_TO_NQUINCY,&WOLLASTON_SOUTH,&WOLLASTON_NORTH,
+    &WOLLASTON_TO_CQUINCY,&QUINCYC_TO_WOLLASTON,&QUINCYC_SOUTH,&QUINCYC_NORTH,
+    &QUINCYC_TO_QADAMS,&QADAMS_TO_QUINCYC,&QADAMS_SOUTH,&QADAMS_NORTH,&QADAMS_TO_BRAINTREE,
+    &BRAINTREE_TO_QADAMS,&BRAINTREE_SOUTH,&BRAINTREE_NORTH
+};
+
+
+//need to add parameters for i2c device list so that the function knows which device it is picking.
+uint32_t setStation(const station_t *station, int amplitude, i2c_master_dev_handle_t U1, i2c_master_dev_handle_t U2){
+
+    uint32_t result = 0;
+    if(station->chip==1){
+        result = writeLED(station->addr, amplitude, U1);
+    }
+
+    else if (station->chip==2)
+    {
+        result = writeLED(station->addr, amplitude, U2);
+    }
+    else{
+        result = 0;
+    }
+    return result;
+    
+
+}
+
+uint32_t clearStation(const station_t *station, i2c_master_dev_handle_t U1, i2c_master_dev_handle_t U2){
+
+    uint32_t result = 0;
+    if(station->chip==1){
+        result = writeLED(station->addr, 00, U1);
+    }
+
+    else if (station->chip==2)
+    {
+        result = writeLED(station->addr, 00, U2);
+    }
+    else{
+        result=0;
+    }
+    return result;
+    
+
+}
+
+
+
+
+
+
+
+
+

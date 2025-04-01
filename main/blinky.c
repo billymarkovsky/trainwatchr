@@ -1,4 +1,5 @@
 #include "s31fl3741a.h"
+#include "station_map.h"
 #include "driver/i2c_master.h"
 #include <string.h>
 #include <stdio.h>
@@ -16,11 +17,12 @@
 #define PORT_NUMBER -1
 #define LENGTH 48
 
+
 i2c_master_bus_config_t i2c_mst_config = {
     .clk_source = I2C_CLK_SRC_DEFAULT,
-    .i2c_port = -1,
-    .scl_io_num = 26,
-    .sda_io_num = 25,
+    .i2c_port = PORT_NUMBER,
+    .scl_io_num = SCL_IO_PIN,
+    .sda_io_num = SDA_IO_PIN,
     .glitch_ignore_cnt = 7,
     .flags.enable_internal_pullup = true,
 };
@@ -55,32 +57,23 @@ void app_main(void){
     S31FL3741_init(U1_dev_handle);
     
     ESP_LOGI("tag","log");
-    S31FL3741_setGlobalCurrent(30,U1_dev_handle);
-    S31FL3741_setGlobalCurrent(30,U2_dev_handle);
+    S31FL3741_setGlobalCurrent(50,U1_dev_handle);
+    S31FL3741_setGlobalCurrent(50,U2_dev_handle);
     ESP_LOGI("tag","test");
 
+    int red_line_size = 115;
+
     while (1) {
+    
+        for(int i = 1; i<red_line_size;i=i+2 ){
+            setStation(red_line_stations[i],50,U1_dev_handle,U2_dev_handle);
+            setStation(red_line_stations[i-1],50,U1_dev_handle,U2_dev_handle);
+            vTaskDelay(50/ portTICK_PERIOD_MS);
+            clearStation(red_line_stations[i],U1_dev_handle,U2_dev_handle);
+            clearStation(red_line_stations[i-1],U1_dev_handle,U2_dev_handle);
 
-    ESP_LOGI("tag","loop started");
 
-	for(uint16_t i = 0; i < 351; i++)
-	{
-        ESP_LOGI("tag","i");
-	    writeLED(i, 100, U1_dev_handle);
-	 	vTaskDelay(50/ portTICK_PERIOD_MS);
-        writeLED(i, 0, U1_dev_handle);
-	}
-
-    ESP_LOGI("tag","end of for loop");
-    vTaskDelay(1000/ portTICK_PERIOD_MS);
-
-    for(uint16_t i = 0; i < 351; i++)
-	{
-        ESP_LOGI("tag","i");
-	    writeLED(i, 100, U2_dev_handle);
-	 	vTaskDelay(50/ portTICK_PERIOD_MS);
-        writeLED(i, 0, U2_dev_handle);
-	}
+        }
 
     
 
