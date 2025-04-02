@@ -61,19 +61,29 @@ void app_main(void){
     S31FL3741_setGlobalCurrent(50,U2_dev_handle);
     ESP_LOGI("tag","test");
 
-    int red_line_size = 115;
+    int red_line_size = 116;
+    int blue_line_size = 48;
 
     while (1) {
     
-        for(int i = 1; i<red_line_size;i=i+2 ){
-            setStation(red_line_stations[i],50,U1_dev_handle,U2_dev_handle);
-            setStation(red_line_stations[i-1],50,U1_dev_handle,U2_dev_handle);
-            vTaskDelay(50/ portTICK_PERIOD_MS);
-            clearStation(red_line_stations[i],U1_dev_handle,U2_dev_handle);
-            clearStation(red_line_stations[i-1],U1_dev_handle,U2_dev_handle);
+        for(int i = 0; i<red_line_size;i++ ){
+            setStation(red_line_stations[i],30,U1_dev_handle,U2_dev_handle);
+            vTaskDelay(25/ portTICK_PERIOD_MS);
+            // clearStation(red_line_stations[i],U1_dev_handle,U2_dev_handle);
+            // clearStation(red_line_stations[i-1],U1_dev_handle,U2_dev_handle);
 
 
         }
+        for (int i = 0; i<blue_line_size; i++){
+            setStation(blue_line_stations[i],30,U1_dev_handle,U2_dev_handle);
+            vTaskDelay(25/ portTICK_PERIOD_MS);
+        }
+        
+        vTaskDelay(1000/ portTICK_PERIOD_MS);
+
+        clearAllMatrix(U1_dev_handle);
+        clearAllMatrix(U2_dev_handle);
+        
 
     
 
