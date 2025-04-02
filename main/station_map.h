@@ -15,6 +15,7 @@ typedef struct
 
 extern const station_t *red_line_stations[];
 extern const station_t *blue_line_stations[];
+extern const station_t *orange_line_stations[];
 
 uint32_t setStation(const station_t *station, int amplitude, i2c_master_dev_handle_t U1, i2c_master_dev_handle_t U2);
 uint32_t clearStation(const station_t *station, i2c_master_dev_handle_t U1, i2c_master_dev_handle_t U2);

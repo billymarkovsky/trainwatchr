@@ -63,6 +63,7 @@ void app_main(void){
 
     int red_line_size = 116;
     int blue_line_size = 48;
+    int orange_line_size = 78;
 
     while (1) {
     
@@ -76,6 +77,10 @@ void app_main(void){
         }
         for (int i = 0; i<blue_line_size; i++){
             setStation(blue_line_stations[i],30,U1_dev_handle,U2_dev_handle);
+            vTaskDelay(25/ portTICK_PERIOD_MS);
+        }
+        for (int i = 0; i<orange_line_size; i++){
+            setStation(orange_line_stations[i],30,U1_dev_handle,U2_dev_handle);
             vTaskDelay(25/ portTICK_PERIOD_MS);
         }
         
