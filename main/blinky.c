@@ -9,6 +9,7 @@
 #include "freertos/task.h"
 #include "freertos/timers.h"
 
+
 #define SCL_IO_PIN 26
 #define SDA_IO_PIN 25
 
@@ -64,8 +65,7 @@ void app_main(void){
     int red_line_size = 116;
     int blue_line_size = 48;
     int orange_line_size = 78;
-    int green_line_size = 46;
-
+    int j;
     while (1) {
     
         for(int i = 0; i<red_line_size;i++ ){
@@ -80,9 +80,20 @@ void app_main(void){
             setStation(orange_line_stations[i],30,U1_dev_handle,U2_dev_handle);
             vTaskDelay(25/ portTICK_PERIOD_MS);
         }
-        for (int i = 0; i<green_line_size; i++){
-            setStation(green_line_stations[i],30,U1_dev_handle,U2_dev_handle);
+        for (int i = 0; i<main_green_len; i++){
+            setStation(main_green_line_stations[i],30,U1_dev_handle,U2_dev_handle);
             vTaskDelay(25/ portTICK_PERIOD_MS);
+        }
+
+        j = 0;
+
+        while(j<d_green_len){
+            if(j<b_green_len){setStation(b_green_line_stations[j],30,U1_dev_handle,U2_dev_handle);};
+            if(j<c_green_len){setStation(c_green_line_stations[j],30,U1_dev_handle,U2_dev_handle);};
+            if(j<d_green_len){setStation(d_green_line_stations[j],30,U1_dev_handle,U2_dev_handle);};
+            if(j<e_green_len){setStation(e_green_line_stations[j],30,U1_dev_handle,U2_dev_handle);};
+            vTaskDelay(25/ portTICK_PERIOD_MS);
+            j++;
         }
         
         vTaskDelay(1000/ portTICK_PERIOD_MS);
