@@ -1,7 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
 #include "driver/i2c_master.h"
 #include "freertos/FreeRTOS.h"
 #include "s31fl3741a.h"
 #include "station_map.h"
+#include "esp_log.h"
 
 //alankilian@gmail.com help with T api
 
@@ -630,6 +635,9 @@ const station_t *e_green_line_stations[] = {
 };
 
 
+int red_line_len = sizeof(red_line_stations) / sizeof(red_line_stations[0]);
+int blue_line_len = sizeof(blue_line_stations) / sizeof(blue_line_stations[0]);
+int orange_line_len = sizeof(orange_line_stations) / sizeof(orange_line_stations[0]);
 
 int main_green_len = sizeof(main_green_line_stations) / sizeof(main_green_line_stations[0]);
 int b_green_len = sizeof(b_green_line_stations) / sizeof(b_green_line_stations[0]);
@@ -674,6 +682,27 @@ uint32_t clearStation(const station_t *station, i2c_master_dev_handle_t U1, i2c_
     return result;
     
 
+}
+
+uint32_t updateLine(const station_t *line[], unsigned char *line_data, int line_len, int amplitude, i2c_master_dev_handle_t U1, i2c_master_dev_handle_t U2 ){
+    ESP_LOGI("tag","test0");
+    ESP_LOGI("tag", "line_data = %p, line_len = %d", line_data, line_len);
+    if (line_data == NULL) {
+        ESP_LOGE("tag", "line_data is NULL!");
+        return 1;
+    }
+    for (int i = 0; i < line_len; i++) {
+        int byte_index = i / 8;         
+        int bit_index = i % 8;           
+        int bit_on = (line_data[byte_index] >> bit_index) & 1;    
+        if (line_data[byte_index] & (1 << bit_index)) {
+            setStation(line[i], amplitude, U1, U2);
+        } else {
+            clearStation(line[i], U1, U2);
+        }
+    }
+    return 0;
+    
 }
 
 
