@@ -46,8 +46,9 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define GATTS_SERVICE_UUID_TEST_A   0x00FF
 #define GATTS_CHAR_UUID_RED_LINE    0xFF01
 #define GATTS_CHAR_UUID_BLUE_LINE   0xFE02
-#define GATTS_CHAR_UUID_ORANGE_LINE  0xFD03
-// #define GATTS_DESCR_UUID_TEST_A     0x3333
+#define GATTS_CHAR_UUID_ORANGE_LINE 0xFD03
+#define GATTS_CHAR_UUID_GREEN_LINE  0xFC04
+
 #define GATTS_NUM_HANDLE_TEST_A     10
 
 static char test_device_name[ESP_BLE_ADV_NAME_LEN_MAX] = "TrainWatchr Server";
@@ -61,6 +62,7 @@ static char test_device_name[ESP_BLE_ADV_NAME_LEN_MAX] = "TrainWatchr Server";
 static uint8_t char1_str[] = {0x11,0x22};
 static uint8_t char2_str[] = {0x34,0x56};
 static uint8_t char3_str[] = {0x70,0x81};
+static uint8_t char4_str[] = {0xAA,0xBB};
 
 static esp_gatt_char_prop_t a_property = 0;
 // static esp_gatt_char_prop_t b_property = 0;
@@ -83,6 +85,13 @@ static esp_attr_value_t gatts_demo_char3_val =
 {
     .attr_max_len = GATTS_DEMO_CHAR_VAL_LEN_MAX,
     .attr_len     = sizeof(char3_str),
+    .attr_value   = char3_str,
+};
+
+static esp_attr_value_t gatts_demo_char4_val =
+{
+    .attr_max_len = GATTS_DEMO_CHAR_VAL_LEN_MAX,
+    .attr_len     = sizeof(char4_str),
     .attr_value   = char3_str,
 };
 
@@ -178,6 +187,7 @@ struct gatts_profile_inst {
     esp_bt_uuid_t red_char_uuid;
     esp_bt_uuid_t blue_char_uuid;
     esp_bt_uuid_t orange_char_uuid;
+    esp_bt_uuid_t green_char_uuid;
     esp_gatt_perm_t perm;
     esp_gatt_char_prop_t property;
     uint16_t descr_handle;
@@ -454,10 +464,12 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         profile_a.red_char_uuid.len = ESP_UUID_LEN_16;
         profile_a.blue_char_uuid.len = ESP_UUID_LEN_16;
         profile_a.orange_char_uuid.len = ESP_UUID_LEN_16;
+        profile_a.green_char_uuid.len = ESP_UUID_LEN_16;
 
         profile_a.red_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_RED_LINE;
         profile_a.blue_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_BLUE_LINE;
         profile_a.orange_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_ORANGE_LINE;
+        profile_a.green_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_GREEN_LINE;
 
         esp_ble_gatts_start_service(profile_a.service_handle);
         a_property = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
@@ -487,6 +499,15 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         if (add_char_ret){
             ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
         }
+
+        add_char_ret = esp_ble_gatts_add_char(profile_a.service_handle, &profile_a.green_char_uuid,
+            ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+            a_property,
+            &gatts_demo_char4_val, NULL);
+        if (add_char_ret){
+            ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
+        }
+
         break;
     case ESP_GATTS_ADD_INCL_SRVC_EVT:
         break;
