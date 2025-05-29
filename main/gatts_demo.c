@@ -704,6 +704,7 @@ void app_main(void)
 
     S31FL3741_init(U2_dev_handle);
     S31FL3741_init(U1_dev_handle);
+    enableLEDDrivers();
     
     ESP_LOGI("tag","log");
     S31FL3741_setGlobalCurrent(50,U1_dev_handle);

@@ -41,6 +41,9 @@
  uint32_t clearAllMatrix(i2c_master_dev_handle_t dev_handle);
  uint32_t setAllMatrix(i2c_master_dev_handle_t dev_handle);
  uint32_t writeAllMatrix(uint8_t pwmValue, i2c_master_dev_handle_t dev_handle);
+ void enableLEDDrivers()
+ void disableLEDDrivers();
+
  
  /***********************************
   * Macros

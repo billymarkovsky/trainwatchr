@@ -1,6 +1,8 @@
 #include "s31fl3741a.h"
+#include "driver/gpio.h"
 
-
+#define U1_ENABLE 7
+#define U2_ENABLE 8
 
 
 uint32_t S31FL3741_unlock(i2c_master_dev_handle_t dev_handle)
@@ -274,6 +276,12 @@ uint32_t S31FL3741_init(i2c_master_dev_handle_t dev_handle)
 	/* extinguish all LEDs */
 	clearAllMatrix(dev_handle);
 
+	gpio_pad_select(U1_ENABLE);
+	gpio_pad_select(U2_ENABLE);
+
+	gpio_set_direction(U1_ENABLE, GPIO_MODE_OUTPUT);
+	gpio_set_direction(U2_ENABLE, GPIO_MODE_OUTPUT);
+
 	return result;
 }
 
@@ -323,4 +331,16 @@ uint32_t writeAllMatrix(uint8_t pwmValue, i2c_master_dev_handle_t dev_handle)
 	result = writeGlobalLED(ledMatrix, sizeof(ledMatrix), dev_handle);
 
 	return result;
+}
+
+void enableLEDDrivers(){
+	gpio_set_level(U1_ENABLE, 1);
+	gpio_set_level(U2_ENABLE, 1);
+
+}
+
+void disableLEDDrivers(){
+	gpio_set_level(U1_ENABLE, 0);
+	gpio_set_level(U2_ENABLE, 0);
+
 }
