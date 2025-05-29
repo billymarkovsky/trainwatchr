@@ -276,8 +276,6 @@ uint32_t S31FL3741_init(i2c_master_dev_handle_t dev_handle)
 	/* extinguish all LEDs */
 	clearAllMatrix(dev_handle);
 
-	gpio_pad_select(U1_ENABLE);
-	gpio_pad_select(U2_ENABLE);
 
 	gpio_set_direction(U1_ENABLE, GPIO_MODE_OUTPUT);
 	gpio_set_direction(U2_ENABLE, GPIO_MODE_OUTPUT);

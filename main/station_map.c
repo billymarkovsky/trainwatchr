@@ -686,7 +686,7 @@ uint32_t clearStation(const station_t *station, i2c_master_dev_handle_t U1, i2c_
 
 uint32_t updateLine(const station_t *line[], unsigned char *line_data, int line_len, int amplitude, i2c_master_dev_handle_t U1, i2c_master_dev_handle_t U2 ){
     ESP_LOGI("tag","test0");
-    ESP_LOGI("tag", "line_data = %p, line_len = %d", line_data, line_len);
+    ESP_LOGI("tag", "line_data = %p, line_len = %d", &line_data, line_len);
     if (line_data == NULL) {
         ESP_LOGE("tag", "line_data is NULL!");
         return 1;

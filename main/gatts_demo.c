@@ -76,7 +76,7 @@ static uint8_t char2_str[] = {0x34,0x56};
 static uint8_t char3_str[] = {0x70,0x81};
 
 struct received_data_t {
-    unsigned char red_line[13];
+    unsigned char red_line[15];
     unsigned char orange_line[13];
     unsigned char blue_line[13];
 };
@@ -689,6 +689,9 @@ void mbta_led_task(void *p) {
             ESP_LOG_BUFFER_HEX("TASK_RECV", station_data.red_line, sizeof(station_data.red_line));
             updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
             updateLine(blue_line_stations,station_data.blue_line,blue_line_len,30, U1, U2);
+            ESP_LOGI("TASK", "orange_line_len = %d bits, buffer size = %d bytes",
+                orange_line_len, sizeof(station_data.orange_line));
+            ESP_LOG_BUFFER_HEX("TASK_RECV_ORANGE", station_data.orange_line, sizeof(station_data.orange_line));
             updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
         }
     }
