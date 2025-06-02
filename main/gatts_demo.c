@@ -50,6 +50,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define GATTS_CHAR_UUID_RED_LINE    0xFF01
 #define GATTS_CHAR_UUID_BLUE_LINE   0xFE02
 #define GATTS_CHAR_UUID_ORANGE_LINE  0xFD03
+#define GATTS_CHAR_UUID_MAIN_GREEN_LINE 0xFF01
 // #define GATTS_DESCR_UUID_TEST_A     0x3333
 #define GATTS_NUM_HANDLE_TEST_A     10
 
@@ -77,8 +78,9 @@ static uint8_t char3_str[] = {0x70,0x81};
 
 struct received_data_t {
     unsigned char red_line[15];
-    unsigned char orange_line[13];
-    unsigned char blue_line[13];
+    unsigned char orange_line[10];
+    unsigned char blue_line[6];
+    unsigned char main_green_line[8];
 };
 
 static QueueHandle_t led_update_queue;
@@ -203,6 +205,8 @@ struct gatts_profile_inst {
     uint16_t blue_char_handle;
     esp_bt_uuid_t orange_char_uuid;
     uint16_t orange_char_handle;
+    esp_bt_uuid_t main_green_char_uuid;
+    uint16_t main_green_char_handle;
     esp_gatt_perm_t perm;
     esp_gatt_char_prop_t property;
     uint16_t descr_handle;
@@ -465,6 +469,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
             memcpy(station_data.blue_line, param->write.value, param->write.len);
         } else if (param->write.handle == profile_a.orange_char_handle) {
             memcpy(station_data.orange_line, param->write.value, param->write.len);  
+        } else if (param->write.handle == profile_a.main_green_char_handle) {
+            memcpy(station_data.main_green_line, param->write.value, param->write.len);  
         }
         xQueueSend(led_update_queue,&station_data,1000);
         example_write_event_env(gatts_if, &a_prepare_write_env, param);
@@ -491,10 +497,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         profile_a.red_char_uuid.len = ESP_UUID_LEN_16;
         profile_a.blue_char_uuid.len = ESP_UUID_LEN_16;
         profile_a.orange_char_uuid.len = ESP_UUID_LEN_16;
+        profile_a.main_green_char_uuid.len = ESP_UUID_LEN_16;
+        
 
         profile_a.red_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_RED_LINE;
         profile_a.blue_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_BLUE_LINE;
         profile_a.orange_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_ORANGE_LINE;
+        profile_a.main_green_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_MAIN_GREEN_LINE;
 
         esp_ble_gatts_start_service(profile_a.service_handle);
         a_property = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
@@ -540,7 +549,10 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
             profile_a.blue_char_handle = param->add_char.attr_handle;
         } else if (param->add_char.char_uuid.uuid.uuid16 == GATTS_CHAR_UUID_ORANGE_LINE) {
             profile_a.orange_char_handle = param->add_char.attr_handle;
-        } else {
+        } else if (param->add_char.char_uuid.uuid.uuid16 == GATTS_CHAR_UUID_MAIN_GREEN_LINE) {
+            profile_a.main_green_char_handle = param->add_char.attr_handle;
+        }
+        else {
             ESP_LOGW(GATTS_TAG, "Unknown characteristic UUID");
         }
     
@@ -685,14 +697,10 @@ void mbta_led_task(void *p) {
 
     while (1) {
         if(xQueueReceive(led_update_queue,&station_data,1000)){
-            ESP_LOGI("TASK", "Got data from queue");
-            ESP_LOG_BUFFER_HEX("TASK_RECV", station_data.red_line, sizeof(station_data.red_line));
             updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
-            updateLine(blue_line_stations,station_data.blue_line,blue_line_len,30, U1, U2);
-            ESP_LOGI("TASK", "orange_line_len = %d bits, buffer size = %d bytes",
-                orange_line_len, sizeof(station_data.orange_line));
-            ESP_LOG_BUFFER_HEX("TASK_RECV_ORANGE", station_data.orange_line, sizeof(station_data.orange_line));
+            updateLine(blue_line_stations,station_data.blue_line,blue_line_len,20, U1, U2);
             updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
+            updateLine(main_green_line_stations,station_data.main_green_line,main_green_len,30, U1, U2);
         }
     }
 }
