@@ -22,11 +22,16 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_bt.h"
 #include "esp_sleep.h"
+
+#include "soc/gpio_reg.h"
+#include "soc/io_mux_reg.h"
+#include "esp_mac.h"
 
 #include "esp_gap_ble_api.h"
 #include "esp_gatts_api.h"
@@ -49,8 +54,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define GATTS_SERVICE_UUID_TEST_A   0x00FF
 #define GATTS_CHAR_UUID_RED_LINE    0xFF01
 #define GATTS_CHAR_UUID_BLUE_LINE   0xFE02
-#define GATTS_CHAR_UUID_ORANGE_LINE  0xFD03
-#define GATTS_CHAR_UUID_MAIN_GREEN_LINE 0xFF01
+#define GATTS_CHAR_UUID_ORANGE_LINE  0xFC04
+#define GATTS_CHAR_UUID_MAIN_GREEN_LINE 0xFD03
 // #define GATTS_DESCR_UUID_TEST_A     0x3333
 #define GATTS_NUM_HANDLE_TEST_A     10
 
@@ -65,12 +70,14 @@ static char test_device_name[ESP_BLE_ADV_NAME_LEN_MAX] = "TrainWatchr Server";
 
 #define SCL_IO_PIN 26
 #define SDA_IO_PIN 25
+#define INPUT_BUTTON 19
 
 #define MASTER_FREQUENCY 400000
 
 #define PORT_NUMBER -1
 #define LENGTH 48
 
+#define DEFAULT_BRIGHTNESS 30
 
 static uint8_t char1_str[] = {0x11,0x22};
 static uint8_t char2_str[] = {0x34,0x56};
@@ -83,7 +90,11 @@ struct received_data_t {
     unsigned char main_green_line[8];
 };
 
+static bool deviceConnected = 0;
+static bool leds_on_flag = false;
+
 static QueueHandle_t led_update_queue;
+
 
 
 static esp_gatt_char_prop_t a_property = 0;
@@ -533,6 +544,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         if (add_char_ret){
             ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
         }
+        add_char_ret = esp_ble_gatts_add_char(profile_a.service_handle, &profile_a.main_green_char_uuid,
+                                                ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+                                                a_property,
+                                                &gatts_demo_char3_val, NULL);
+        if (add_char_ret){
+            ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
+        }
         break;
     case ESP_GATTS_ADD_INCL_SRVC_EVT:
         break;
@@ -700,7 +718,7 @@ void mbta_led_task(void *p) {
             updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
             updateLine(blue_line_stations,station_data.blue_line,blue_line_len,20, U1, U2);
             updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
-            updateLine(main_green_line_stations,station_data.main_green_line,main_green_len,30, U1, U2);
+            updateLine(main_green_line_stations,station_data.main_green_line,main_green_len,10, U1, U2);
         }
     }
 }
