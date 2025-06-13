@@ -22,11 +22,16 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_bt.h"
 #include "esp_sleep.h"
+
+#include "soc/gpio_reg.h"
+#include "soc/io_mux_reg.h"
+#include "esp_mac.h"
 
 #include "esp_gap_ble_api.h"
 #include "esp_gatts_api.h"
@@ -49,8 +54,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define GATTS_SERVICE_UUID_TEST_A   0x00FF
 #define GATTS_CHAR_UUID_RED_LINE    0xFF01
 #define GATTS_CHAR_UUID_BLUE_LINE   0xFE02
-#define GATTS_CHAR_UUID_ORANGE_LINE  0xFD03
-#define GATTS_CHAR_UUID_MAIN_GREEN_LINE 0xFF01
+#define GATTS_CHAR_UUID_ORANGE_LINE  0xFC04
+#define GATTS_CHAR_UUID_MAIN_GREEN_LINE 0xFD03
 // #define GATTS_DESCR_UUID_TEST_A     0x3333
 #define GATTS_NUM_HANDLE_TEST_A     10
 
@@ -65,12 +70,14 @@ static char test_device_name[ESP_BLE_ADV_NAME_LEN_MAX] = "TrainWatchr Server";
 
 #define SCL_IO_PIN 26
 #define SDA_IO_PIN 25
+#define INPUT_BUTTON 19
 
 #define MASTER_FREQUENCY 400000
 
 #define PORT_NUMBER -1
 #define LENGTH 48
 
+#define DEFAULT_BRIGHTNESS 30
 
 static uint8_t char1_str[] = {0x11,0x22};
 static uint8_t char2_str[] = {0x34,0x56};
@@ -82,6 +89,9 @@ struct received_data_t {
     unsigned char blue_line[6];
     unsigned char main_green_line[8];
 };
+
+static bool deviceConnected = 0;
+static bool leds_on_flag = false;
 
 static QueueHandle_t led_update_queue;
 
@@ -468,8 +478,10 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         } else if (param->write.handle == profile_a.blue_char_handle) {
             memcpy(station_data.blue_line, param->write.value, param->write.len);
         } else if (param->write.handle == profile_a.orange_char_handle) {
+            ESP_LOGI("orange_line","has been received");
             memcpy(station_data.orange_line, param->write.value, param->write.len);  
         } else if (param->write.handle == profile_a.main_green_char_handle) {
+            ESP_LOGI("green_line","has been received");
             memcpy(station_data.main_green_line, param->write.value, param->write.len);  
         }
         xQueueSend(led_update_queue,&station_data,1000);
@@ -533,6 +545,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         if (add_char_ret){
             ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
         }
+        add_char_ret = esp_ble_gatts_add_char(profile_a.service_handle, &profile_a.main_green_char_uuid,
+            ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+            a_property,
+            &gatts_demo_char3_val, NULL);
+        if (add_char_ret){
+        ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
+        }
         break;
     case ESP_GATTS_ADD_INCL_SRVC_EVT:
         break;
@@ -589,6 +608,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
     case ESP_GATTS_STOP_EVT:
         break;
     case ESP_GATTS_CONNECT_EVT: {
+        deviceConnected = true;
         esp_ble_conn_update_params_t conn_params = {0};
         memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
         /* For the IOS system, please reference the apple official documents about the ble connection parameters restrictions. */
@@ -604,6 +624,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         break;
     }
     case ESP_GATTS_DISCONNECT_EVT:
+        deviceConnected = false;
         ESP_LOGI(GATTS_TAG, "Disconnected, remote "ESP_BD_ADDR_STR", reason 0x%02x",
                  ESP_BD_ADDR_HEX(param->disconnect.remote_bda), param->disconnect.reason);
         esp_ble_gap_start_advertising(&adv_params);
@@ -694,14 +715,84 @@ void mbta_led_task(void *p) {
 
 
     bool monitor_led = true;
-
+    uint8_t brightness_count = DEFAULT_BRIGHTNESS; 
+    bool brightness_count_ascending = false;
+    bool led_tracker = false; //variable to track if leds are on, to avoid sending redundant I2C commands
+    
     while (1) {
-        if(xQueueReceive(led_update_queue,&station_data,1000)){
-            updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
-            updateLine(blue_line_stations,station_data.blue_line,blue_line_len,20, U1, U2);
-            updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
-            updateLine(main_green_line_stations,station_data.main_green_line,main_green_len,30, U1, U2);
+        if(leds_on_flag){
+            led_tracker = true;
+            if(deviceConnected){
+                if(brightness_count != DEFAULT_BRIGHTNESS){
+                    S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U1);
+                    S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U2);
+                }
+                if(xQueueReceive(led_update_queue,&station_data,1000)){
+                    updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
+                    updateLine(blue_line_stations,station_data.blue_line,blue_line_len,10, U1, U2);
+                    updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
+                    updateLine(main_green_line_stations,station_data.main_green_line,main_green_len,10, U1, U2);
+                }
+            }
+            else{
+                S31FL3741_setGlobalCurrent(brightness_count,U1);
+                S31FL3741_setGlobalCurrent(brightness_count,U2);
+                ESP_LOGI("tag", "brightness: %d", brightness_count);
+                if(brightness_count < DEFAULT_BRIGHTNESS && brightness_count_ascending){
+                    brightness_count = brightness_count + 1;
+                }
+                else if (brightness_count > 1 && !brightness_count_ascending) {
+                    brightness_count = brightness_count - 1;
+                    
+                }
+                else{
+                    brightness_count_ascending = !brightness_count_ascending;
+                }
+                vTaskDelay(5);
+                
+                
+            }
         }
+        else{
+            if(led_tracker){
+                clearAllMatrix(U1);
+                clearAllMatrix(U2);
+                led_tracker = 0;
+            }
+
+        }
+        vTaskDelay(30 / portTICK_PERIOD_MS);
+    }
+}
+
+QueueHandle_t interputQueue;
+
+static void IRAM_ATTR gpio_interrupt_handler(void *args)
+{
+    int pinNumber = (int)args;
+    xQueueSendFromISR(interputQueue, &pinNumber, NULL);
+}
+
+void button_logic_task(void *p){
+    int pinNumber;
+    while(1){
+        if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY)){
+            ESP_LOGI("BUTTON", "Button press detected");
+            
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+            if(gpio_get_level(INPUT_BUTTON) == 0){ 
+                ESP_LOGI("BUTTON", "Button held for 3 seconds, starting advertising...");
+                esp_err_t err = esp_ble_gap_start_advertising(&adv_params);
+                if (err != ESP_OK) {
+                    ESP_LOGE("BUTTON", "Failed to start advertising: %s", esp_err_to_name(err));
+                }
+            
+            }
+            else{
+                leds_on_flag = !leds_on_flag;
+            }
+        }
+        vTaskDelay(30 / portTICK_PERIOD_MS);
     }
 }
 
@@ -713,17 +804,32 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &U1_dev_cfg, &U1_dev_handle));
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &U2_dev_cfg, &U2_dev_handle));
 
+    enableLEDDrivers();
     S31FL3741_init(U2_dev_handle);
     S31FL3741_init(U1_dev_handle);
-    enableLEDDrivers();
+    
     
     ESP_LOGI("tag","log");
-    S31FL3741_setGlobalCurrent(50,U1_dev_handle);
-    S31FL3741_setGlobalCurrent(50,U2_dev_handle);
+    S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U1_dev_handle);
+    S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U2_dev_handle);
     ESP_LOGI("tag","test");
 
     struct received_data_t receive_data_buffer;
-    
+
+    interputQueue = xQueueCreate(10, sizeof(int));
+    if (interputQueue == NULL) {
+        ESP_LOGE(GATTS_TAG, "Failed to create LED update queue");
+        abort();
+    }
+
+    esp_rom_gpio_pad_select_gpio(INPUT_BUTTON);
+    gpio_reset_pin(INPUT_BUTTON);
+    gpio_set_direction(INPUT_BUTTON, GPIO_MODE_INPUT);
+    gpio_pullup_en(INPUT_BUTTON);
+    gpio_pulldown_dis(INPUT_BUTTON);
+    gpio_set_intr_type(INPUT_BUTTON, GPIO_INTR_NEGEDGE);
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(INPUT_BUTTON, gpio_interrupt_handler, (void *)INPUT_BUTTON);
 
     led_update_queue = xQueueCreate(10, sizeof(receive_data_buffer));
     if (led_update_queue == NULL) {
@@ -799,6 +905,9 @@ void app_main(void)
     }
 
     xTaskCreate(mbta_led_task, "mbta_led_task", 8192, &led_task_params, 5, NULL);
+    //xTaskCreate(button_logic_task, "button_logic_task", 2048, NULL, 4, NULL);
+
+    
 
 
     return;
