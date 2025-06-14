@@ -754,14 +754,6 @@ void mbta_led_task(void *p) {
                 
             }
         }
-        else{
-            if(led_tracker){
-                clearAllMatrix(U1);
-                clearAllMatrix(U2);
-                led_tracker = 0;
-            }
-
-        }
         vTaskDelay(30 / portTICK_PERIOD_MS);
     }
 }
@@ -815,6 +807,17 @@ void button_logic_task(void *p){
                 xTimerStop(long_press_timer, 0);
                 if (!long_press_action_fired) {
                     leds_on_flag = !leds_on_flag;
+                    ESP_LOGE("TAG", "LED state changed");
+                }
+                if (leds_on_flag){
+                    enableLEDDrivers();
+                    ESP_LOGE("TAG", "LEDs turned on");
+                }
+                else{
+                    clearAllMatrix(U1_dev_handle);
+                    clearAllMatrix(U2_dev_handle);
+                    disableLEDDrivers();
+                    ESP_LOGE("TAG", "LEDs turned off");
                 }
             }
         }
