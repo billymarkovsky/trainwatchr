@@ -728,7 +728,7 @@ void mbta_led_task(void *p) {
                     S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U1);
                     S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U2);
                 }
-                if(xQueueReceive(led_update_queue,&station_data,1000)){
+                if(xQueueReceive(led_update_queue,&station_data,1000) && leds_on_flag){
                     updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
                     updateLine(blue_line_stations,station_data.blue_line,blue_line_len,10, U1, U2);
                     updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
