@@ -57,7 +57,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
 #define GATTS_CHAR_UUID_RED_LINE    0xFF01
 #define GATTS_CHAR_UUID_BLUE_LINE   0xFE02
 #define GATTS_CHAR_UUID_ORANGE_LINE  0xFC04
-#define GATTS_CHAR_UUID_MAIN_GREEN_LINE 0xFD03
+#define GATTS_CHAR_UUID_green_line 0xFD03
 // #define GATTS_DESCR_UUID_TEST_A     0x3333
 #define GATTS_NUM_HANDLE_TEST_A     10
 
@@ -89,11 +89,17 @@ struct received_data_t {
     unsigned char red_line[15];
     unsigned char orange_line[10];
     unsigned char blue_line[6];
-    unsigned char main_green_line[8];
+    unsigned char green_line[26];
 };
 
+#define RED_LINE_PWM_BRIGHTNESS 30
+#define ORANGE_LINE_PWM_BRIGHTNESS 30
+#define BLUE_LINE_PWM_BRIGHTNESS 5
+#define GREEN_LINE_PWM_BRIGHTNESS 3
+
 static bool deviceConnected = false;
-static bool leds_on_flag = false;
+static bool leds_on_flag = true;
+static bool power_on_sequence_complete = false;
 
 static QueueHandle_t led_update_queue;
 
@@ -218,8 +224,8 @@ struct gatts_profile_inst {
     uint16_t blue_char_handle;
     esp_bt_uuid_t orange_char_uuid;
     uint16_t orange_char_handle;
-    esp_bt_uuid_t main_green_char_uuid;
-    uint16_t main_green_char_handle;
+    esp_bt_uuid_t green_char_uuid;
+    uint16_t green_char_handle;
     esp_gatt_perm_t perm;
     esp_gatt_char_prop_t property;
     uint16_t descr_handle;
@@ -482,8 +488,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
             memcpy(station_data.blue_line, param->write.value, param->write.len);
         } else if (param->write.handle == profile_a.orange_char_handle) {
             memcpy(station_data.orange_line, param->write.value, param->write.len);  
-        } else if (param->write.handle == profile_a.main_green_char_handle) {
-            memcpy(station_data.main_green_line, param->write.value, param->write.len);  
+        } else if (param->write.handle == profile_a.green_char_handle) {
+            memcpy(station_data.green_line, param->write.value, param->write.len);  
         }
         xQueueSend(led_update_queue,&station_data,1000);
         example_write_event_env(gatts_if, &a_prepare_write_env, param);
@@ -510,13 +516,13 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         profile_a.red_char_uuid.len = ESP_UUID_LEN_16;
         profile_a.blue_char_uuid.len = ESP_UUID_LEN_16;
         profile_a.orange_char_uuid.len = ESP_UUID_LEN_16;
-        profile_a.main_green_char_uuid.len = ESP_UUID_LEN_16;
+        profile_a.green_char_uuid.len = ESP_UUID_LEN_16;
         
 
         profile_a.red_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_RED_LINE;
         profile_a.blue_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_BLUE_LINE;
         profile_a.orange_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_ORANGE_LINE;
-        profile_a.main_green_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_MAIN_GREEN_LINE;
+        profile_a.green_char_uuid.uuid.uuid16 = GATTS_CHAR_UUID_green_line;
 
         esp_ble_gatts_start_service(profile_a.service_handle);
         a_property = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
@@ -546,7 +552,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
         if (add_char_ret){
             ESP_LOGE(GATTS_TAG, "add char failed, error code =%x",add_char_ret);
         }
-        add_char_ret = esp_ble_gatts_add_char(profile_a.service_handle, &profile_a.main_green_char_uuid,
+        add_char_ret = esp_ble_gatts_add_char(profile_a.service_handle, &profile_a.green_char_uuid,
                                                 ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
                                                 a_property,
                                                 &gatts_demo_char3_val, NULL);
@@ -569,8 +575,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event, esp_gatt_i
             profile_a.blue_char_handle = param->add_char.attr_handle;
         } else if (param->add_char.char_uuid.uuid.uuid16 == GATTS_CHAR_UUID_ORANGE_LINE) {
             profile_a.orange_char_handle = param->add_char.attr_handle;
-        } else if (param->add_char.char_uuid.uuid.uuid16 == GATTS_CHAR_UUID_MAIN_GREEN_LINE) {
-            profile_a.main_green_char_handle = param->add_char.attr_handle;
+        } else if (param->add_char.char_uuid.uuid.uuid16 == GATTS_CHAR_UUID_green_line) {
+            profile_a.green_char_handle = param->add_char.attr_handle;
         }
         else {
             ESP_LOGW(GATTS_TAG, "Unknown characteristic UUID");
@@ -719,41 +725,77 @@ void mbta_led_task(void *p) {
     uint8_t brightness_count = DEFAULT_BRIGHTNESS; 
     bool brightness_count_ascending = false;
     bool led_tracker = false; //variable to track if leds are on, to avoid sending redundant I2C commands
-    
+    int j = 0;
     while (1) {
         if(leds_on_flag){
-            led_tracker = true;
-            if(deviceConnected){
-                if(brightness_count != DEFAULT_BRIGHTNESS){
-                    S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U1);
-                    S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U2);
+            if(!power_on_sequence_complete){
+                for(int i = 0; i<red_line_len;i++ ){
+                    setStation(red_line_stations[i],RED_LINE_PWM_BRIGHTNESS,U1,U2);
+                    vTaskDelay(20/ portTICK_PERIOD_MS);
                 }
-                if(xQueueReceive(led_update_queue,&station_data,1000) && leds_on_flag){
-                    updateLine(red_line_stations,station_data.red_line,red_line_len,30, U1, U2);
-                    updateLine(blue_line_stations,station_data.blue_line,blue_line_len,10, U1, U2);
-                    updateLine(orange_line_stations,station_data.orange_line,orange_line_len,30, U1, U2);
-                    updateLine(main_green_line_stations,station_data.main_green_line,main_green_len,10, U1, U2);
+                for (int i = 0; i<blue_line_len; i++){
+                    setStation(blue_line_stations[i],BLUE_LINE_PWM_BRIGHTNESS,U1,U2);
+                    vTaskDelay(20/ portTICK_PERIOD_MS);
                 }
+                for (int i = 0; i<orange_line_len; i++){
+                    setStation(orange_line_stations[i],ORANGE_LINE_PWM_BRIGHTNESS,U1,U2);
+                    vTaskDelay(20/ portTICK_PERIOD_MS);
+                }
+                for (int i = 0; i<main_green_len; i++){
+                    setStation(main_green_line_stations[i],GREEN_LINE_PWM_BRIGHTNESS,U1,U2);
+                    vTaskDelay(20/ portTICK_PERIOD_MS);
+                }
+
+                j = 0;
+
+                while(j<d_green_len){
+                    if(j<b_green_len){setStation(b_green_line_stations[j],GREEN_LINE_PWM_BRIGHTNESS,U1,U2);};
+                    if(j<c_green_len){setStation(c_green_line_stations[j],GREEN_LINE_PWM_BRIGHTNESS,U1,U2);};
+                    if(j<d_green_len){setStation(d_green_line_stations[j],GREEN_LINE_PWM_BRIGHTNESS,U1,U2);};
+                    if(j<e_green_len){setStation(e_green_line_stations[j],GREEN_LINE_PWM_BRIGHTNESS,U1,U2);};
+                    vTaskDelay(20/ portTICK_PERIOD_MS);
+                    j++;
+                }
+                vTaskDelay(2000/ portTICK_PERIOD_MS);
+                clearAllMatrix(U1);
+                clearAllMatrix(U2);
+                power_on_sequence_complete = true;
             }
             else{
-                S31FL3741_setGlobalCurrent(brightness_count,U1);
-                S31FL3741_setGlobalCurrent(brightness_count,U2);
-                ESP_LOGI("tag", "brightness: %d", brightness_count);
-                if(brightness_count < DEFAULT_BRIGHTNESS && brightness_count_ascending){
-                    brightness_count = brightness_count + 1;
-                }
-                else if (brightness_count > 1 && !brightness_count_ascending) {
-                    brightness_count = brightness_count - 1;
-                    
+                led_tracker = true;
+                if(deviceConnected){
+                    if(brightness_count != DEFAULT_BRIGHTNESS){
+                        S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U1);
+                        S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U2);
+                    }
+                    if(xQueueReceive(led_update_queue,&station_data,1000) && leds_on_flag){
+                        updateLine(red_line_stations,station_data.red_line,red_line_len,RED_LINE_PWM_BRIGHTNESS, U1, U2);
+                        updateLine(blue_line_stations,station_data.blue_line,blue_line_len,BLUE_LINE_PWM_BRIGHTNESS, U1, U2);
+                        updateLine(orange_line_stations,station_data.orange_line,orange_line_len,ORANGE_LINE_PWM_BRIGHTNESS, U1, U2);
+                        updateLine(all_green_line_stations,station_data.green_line,all_green_len,GREEN_LINE_PWM_BRIGHTNESS, U1, U2);
+                    }
                 }
                 else{
-                    brightness_count_ascending = !brightness_count_ascending;
+                    S31FL3741_setGlobalCurrent(brightness_count,U1);
+                    S31FL3741_setGlobalCurrent(brightness_count,U2);
+                    ESP_LOGI("tag", "brightness: %d", brightness_count);
+                    if(brightness_count < DEFAULT_BRIGHTNESS && brightness_count_ascending){
+                        brightness_count = brightness_count + 1;
+                    }
+                    else if (brightness_count > 1 && !brightness_count_ascending) {
+                        brightness_count = brightness_count - 1;
+                        
+                    }
+                    else{
+                        brightness_count_ascending = !brightness_count_ascending;
+                    }
+                    vTaskDelay(5);
+                    
+                    
                 }
-                vTaskDelay(5);
-                
-                
             }
         }
+    
         vTaskDelay(30 / portTICK_PERIOD_MS);
     }
 }
@@ -934,6 +976,7 @@ void app_main(void)
     if (local_mtu_ret){
         ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+    
 
     xTaskCreate(mbta_led_task, "mbta_led_task", 8192, &led_task_params, 5, NULL);
     xTaskCreate(button_logic_task, "button_logic_task", 2048, NULL, 4, NULL);

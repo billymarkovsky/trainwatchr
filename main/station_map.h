@@ -16,6 +16,7 @@ typedef struct
 extern const station_t *red_line_stations[];
 extern const station_t *blue_line_stations[];
 extern const station_t *orange_line_stations[];
+extern const station_t *all_green_line_stations[];
 extern const station_t *main_green_line_stations[];
 extern const station_t *b_green_line_stations[];
 extern const station_t *c_green_line_stations[];
@@ -31,6 +32,7 @@ extern int b_green_len;
 extern int c_green_len;
 extern int d_green_len;
 extern int e_green_len;
+extern int all_green_len;
 
 
 
