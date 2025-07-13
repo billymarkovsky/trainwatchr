@@ -795,6 +795,13 @@ void mbta_led_task(void *p) {
                 }
             }
         }
+        else{
+            if(led_tracker){
+                clearAllMatrix(U1);
+                clearAllMatrix(U2);
+                led_tracker = false;
+            }
+        }
     
         vTaskDelay(30 / portTICK_PERIOD_MS);
     }
