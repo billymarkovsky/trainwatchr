@@ -25,6 +25,7 @@
 #include "esp_bt_main.h"
 #include "esp_bt_device.h"
 #include "esp_gatt_common_api.h"
+#include "esp_check.h"
 
 #include "s31fl3741a.h"
 #include "station_map.h"
@@ -42,6 +43,9 @@
 #define LENGTH 48
 
 #define DEFAULT_BRIGHTNESS 30
+#define BRIGHTNESS_OPTIONS_LEN 4
+int brightness_options[] = {0, DEFAULT_BRIGHTNESS/2, DEFAULT_BRIGHTNESS, 5*DEFAULT_BRIGHTNESS};
+
 
 extern bool deviceConnected;
 static bool leds_on_flag = true;
@@ -137,8 +141,6 @@ void mbta_led_task(void *p) {
                 led_tracker = true;
                 if(deviceConnected){
                     if(brightness_count != DEFAULT_BRIGHTNESS){
-                        S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U1);
-                        S31FL3741_setGlobalCurrent(DEFAULT_BRIGHTNESS,U2);
                     }
                     if(xQueueReceive(led_update_queue,&station_data,1000) && leds_on_flag){
                         updateLine(red_line_stations,station_data.red_line,red_line_len,RED_LINE_PWM_BRIGHTNESS, U1, U2);
@@ -191,17 +193,12 @@ static volatile bool long_press_action_fired = false;
 
 void long_press_timer_callback(TimerHandle_t xTimer) {
     long_press_action_fired = true; // Set the flag
-
-    esp_err_t err = esp_ble_gap_start_advertising(&adv_params);
-    if (err != ESP_OK) {
-        ESP_LOGE("TAG", "Failed to start advertising: %s", esp_err_to_name(err));
-    } else {
-        ESP_LOGI("TAG", "Advertising started due to long press.");
-    }
 }
 
 void button_logic_task(void *p){
     int pinNumber;
+    int brightness = 1;
+
 
     TimerHandle_t long_press_timer = xTimerCreate(
         "LongPressTimer",           // A text name for the timer (for debugging)
@@ -214,32 +211,61 @@ void button_logic_task(void *p){
     if (long_press_timer == NULL) {
         ESP_LOGE("TAG", "Failed to create the long press timer.");
     }
-
+    
     
     while(1){
         if (xQueueReceive(interputQueue, &pinNumber, portMAX_DELAY)){
 
             if(gpio_get_level(INPUT_BUTTON) == 0){ 
+                ESP_LOGE( "BUTTON", "Button Press Detected");
                 long_press_action_fired = false;
                 xTimerStart(long_press_timer, 0);
+                ESP_LOGE( "BUTTON", "Oops, timer started");
             
             }
             else{
+                ESP_LOGE( "BUTTON", "Press was short");
                 xTimerStop(long_press_timer, 0);
+
                 if (!long_press_action_fired) {
-                    leds_on_flag = !leds_on_flag;
-                    ESP_LOGE("TAG", "LED state changed");
+
+                    if(brightness < BRIGHTNESS_OPTIONS_LEN-1){
+                        brightness = brightness + 1;
+                    }
+                    else{
+                        brightness = 0;
+                    }
+                    ESP_LOGE( "BUTTON", "Is the queue broken?");
+                    //xQueueReset(led_update_queue);
+                    ESP_LOGE( "BUTTON", "No");
+                    S31FL3741_setGlobalCurrent(brightness_options[brightness],U1_dev_handle);
+                    S31FL3741_setGlobalCurrent(brightness_options[brightness],U2_dev_handle);
+                    xQueueReset(led_update_queue);
                 }
-                if (leds_on_flag){
-                    enableLEDDrivers();
-                    ESP_LOGE("TAG", "LEDs turned on");
-                }
+
                 else{
+                    ESP_LOGE( "BUTTON", "Long Press wooo!");
+                    
+                    gpio_isr_handler_remove(INPUT_BUTTON);
+
+                    /* Enable wake up from GPIO */
+                    if(gpio_wakeup_enable(INPUT_BUTTON, GPIO_INTR_LOW_LEVEL) == NULL) ESP_LOGE( "WAKEUP", "Enable gpio wakeup failed");
+                    if(esp_sleep_enable_gpio_wakeup() == NULL)ESP_LOGE( "WAKEUP", "Configure gpio as wakeup source failed");
+
+
                     clearAllMatrix(U1_dev_handle);
                     clearAllMatrix(U2_dev_handle);
                     disableLEDDrivers();
-                    ESP_LOGE("TAG", "LEDs turned off");
+
+                    esp_light_sleep_start();
+                    if(gpio_wakeup_enable(INPUT_BUTTON, GPIO_INTR_LOW_LEVEL) == NULL) ESP_LOGE( "WAKEUP", "Disable gpio wakeup failed");
+                    xQueueReset(interputQueue);
+                    enableLEDDrivers();
+                    gpio_isr_handler_add(INPUT_BUTTON, gpio_interrupt_handler, (void *)INPUT_BUTTON);
+                    
                 }
+                
+
             }
         }
 
@@ -357,8 +383,8 @@ void app_main(void)
     }
     
 
-    xTaskCreate(mbta_led_task, "mbta_led_task", 8192, &led_task_params, 5, NULL);
-    xTaskCreate(button_logic_task, "button_logic_task", 2048, NULL, 4, NULL);
+    xTaskCreate(mbta_led_task, "mbta_led_task", 8192, &led_task_params, 4, NULL);
+    xTaskCreate(button_logic_task, "button_logic_task", 2048, NULL, 5, NULL);
 
     
 

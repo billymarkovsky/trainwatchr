@@ -81,6 +81,13 @@
  #define PULLUP_PULLDOWN 0x77	// pullup/pulldown setting/configuration 0b0111 0111 (32k)
  #define PWM_FREQUENCY 0x03		// 3.6kHz
  
+
+ typedef struct {
+    i2c_master_dev_handle_t dev_handle;
+    int enable_pin;
+    
+} s31fl3741a_config_t;
+
  #ifndef TIMEOUT
  #    define TIMEOUT 100
  #endif
